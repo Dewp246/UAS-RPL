@@ -35,14 +35,14 @@ class KopeRTTestCase(TestCase):
         # Create some test products
         self.rice = Product.objects.create(
             name='Beras Pandan Wangi 5kg',
-            category='Beras & Produk tepung',
+            category='Sembako',
             price=75000.00,
             stock=100,
             desc='Beras kualitas super'
         )
         self.oil = Product.objects.create(
             name='Minyak Goreng Bimoli 2L',
-            category='Minyak goreng & margarin',
+            category='Sembako',
             price=35000.00,
             stock=50,
             desc='Minyak kelapa sawit premium'

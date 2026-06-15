@@ -3,7 +3,70 @@
 import React, { useState, useEffect } from "react";
 import ScrollReveal from "@/components/ScrollReveal";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+// Safe storage wrapper to prevent crash in Safari Private Mode
+const safeStorage = (type: "session" | "local") => {
+  const isAvailable = () => {
+    try {
+      if (typeof window === "undefined") return false;
+      const storage = window[type === "session" ? "sessionStorage" : "localStorage"];
+      if (!storage) return false;
+      const testKey = "__storage_test__";
+      storage.setItem(testKey, testKey);
+      storage.removeItem(testKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const hasStorage = isAvailable();
+  let inMemoryStore: Record<string, string> = {};
+
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        if (hasStorage && typeof window !== "undefined") {
+          return window[type === "session" ? "sessionStorage" : "localStorage"].getItem(key);
+        }
+      } catch (e) {}
+      return inMemoryStore[key] || null;
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        if (hasStorage && typeof window !== "undefined") {
+          window[type === "session" ? "sessionStorage" : "localStorage"].setItem(key, value);
+          return;
+        }
+      } catch (e) {}
+      inMemoryStore[key] = String(value);
+    },
+    removeItem: (key: string): void => {
+      try {
+        if (hasStorage && typeof window !== "undefined") {
+          window[type === "session" ? "sessionStorage" : "localStorage"].removeItem(key);
+          return;
+        }
+      } catch (e) {}
+      delete inMemoryStore[key];
+    },
+    clear: (): void => {
+      try {
+        if (hasStorage && typeof window !== "undefined") {
+          window[type === "session" ? "sessionStorage" : "localStorage"].clear();
+          return;
+        }
+      } catch (e) {}
+      inMemoryStore = {};
+    }
+  };
+};
+
+const sessionStorage = safeStorage("session");
+const localStorage = safeStorage("local");
+
+const API_BASE_URL = typeof window !== "undefined"
+  ? `http://${window.location.hostname}:8000`
+  : "http://127.0.0.1:8000";
 
 interface Product {
   id: number;
@@ -68,38 +131,12 @@ interface Order {
 
 const getCategoryBadgeClass = (category: string) => {
   switch (category) {
-    case "Beras & Produk tepung":
+    case "Sembako":
       return "bg-blue-100 text-brand-blue";
-    case "Minyak goreng & margarin":
+    case "Makanan dan Minuman":
       return "bg-amber-100 text-amber-800";
-    case "Gula & gula merah":
-      return "bg-yellow-100 text-yellow-800";
-    case "Tepung terigu & tepung lainnya":
-      return "bg-orange-100 text-brand-orange";
-    case "Telur & produk telur":
-      return "bg-red-100 text-red-800";
-    case "Susu & produk olahan susu":
-      return "bg-teal-100 text-teal-800";
-    case "Mie / Mi instan":
-      return "bg-indigo-100 text-indigo-800";
-    case "Kopi & teh sachet / bubuk":
-      return "bg-stone-100 text-stone-800";
-    case "Camilan & biskuit":
-      return "bg-pink-100 text-pink-800";
-    case "Bumbu dapur instan & dasar (serbuk/kering)":
-      return "bg-emerald-100 text-emerald-800";
-    case "Produk kalengan & olahan":
+    case "ATK":
       return "bg-purple-100 text-purple-800";
-    case "Minuman cair (sachet, UHT, sirup)":
-      return "bg-sky-100 text-sky-800";
-    case "Kacang kacangan & snack tradisional":
-      return "bg-lime-100 text-lime-800";
-    case "Sabun, deterjen, perlengkapan kebersihan":
-      return "bg-cyan-100 text-cyan-800";
-    case "Kertas tisu & alat tulis sederhana":
-      return "bg-violet-100 text-violet-800";
-    case "Hand sanitizer / antiseptik / kesehatan ringan":
-      return "bg-green-100 text-green-800";
     default:
       return "bg-zinc-100 text-zinc-600";
   }
@@ -111,22 +148,12 @@ const getProductImageUrl = (prod: { id: number; name: string; category: string; 
   }
   
   const catLower = prod.category.toLowerCase();
-  if (catLower.includes("beras") || catLower.includes("tepung") || catLower.includes("telur") || catLower.includes("gula") || catLower.includes("bumbu") || catLower.includes("kaleng")) {
+  if (catLower.includes("sembako")) {
     return "/images/category_sembako.png";
-  } else if (catLower.includes("minyak") || catLower.includes("margarin")) {
-    return "/images/category_minyak.png";
-  } else if (catLower.includes("mie") || catLower.includes("mi ")) {
-    return "/images/category_mie.png";
-  } else if (catLower.includes("susu") || catLower.includes("minuman") || catLower.includes("kopi") || catLower.includes("teh")) {
+  } else if (catLower.includes("minuman") || catLower.includes("makanan")) {
     return "/images/category_susu.png";
-  } else if (catLower.includes("camilan") || catLower.includes("kacang")) {
-    return "/images/category_camilan.png";
-  } else if (catLower.includes("sabun") || catLower.includes("detergen") || catLower.includes("kebersihan")) {
-    return "/images/category_kebersihan.png";
-  } else if (catLower.includes("tisu") || catLower.includes("tulis")) {
+  } else if (catLower.includes("atk")) {
     return "/images/category_atk.png";
-  } else if (catLower.includes("sanitizer") || catLower.includes("kesehatan") || catLower.includes("antiseptik") || catLower.includes("angin")) {
-    return "/images/category_kesehatan.png";
   }
   
   return "/images/category_sembako.png";
@@ -222,6 +249,7 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Login Form States
   const [loginIdentifier, setLoginIdentifier] = useState("");
@@ -812,7 +840,7 @@ export default function Home() {
     setProductModalMode("add");
     setSelectedProductId(null);
     setProdName("");
-    setProdCategory("Beras & Produk tepung");
+    setProdCategory("Sembako");
     setProdPrice("");
     setProdStock("");
     setProdImage("📦");
@@ -1130,7 +1158,7 @@ export default function Home() {
 
       {/* Main Header / Navbar */}
       <header className="sticky top-0 bg-[#f0f4f8]/90 backdrop-blur-md z-40 py-4 px-6 border-b border-white/50 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className={`${userRole === "admin" ? "w-full px-4" : "max-w-6xl mx-auto"} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <span className="text-3xl">🛒</span>
             <div>
@@ -1218,38 +1246,60 @@ export default function Home() {
       </header>
 
       {/* Main App Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col gap-10">
-        
-        {/* IF ROLE IS ADMIN: RENDER ADMIN DASHBOARD WIDGET */}
-        {userRole === "admin" ? (
+      {userRole === "admin" ? (
+        <main className="flex-1 w-full p-0 flex flex-col">
           <ScrollReveal animation="fade-in">
             {/* ══════════════════════════════════════════════════════════════ */}
             {/*  MODERN PROFESSIONAL ADMIN DASHBOARD                          */}
             {/* ══════════════════════════════════════════════════════════════ */}
-            <div id="admin-dashboard" style={{ minHeight: "calc(100vh - 120px)" }}
-              className="flex rounded-3xl overflow-hidden shadow-2xl border border-white/40"
+            <div id="admin-dashboard" style={{ minHeight: "calc(100vh - 80px)" }}
+              className="flex overflow-hidden border-0 shadow-none w-full"
             >
+              {/* Sidebar backdrop for mobile */}
+              {isMobileSidebarOpen && (
+                <div 
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  style={{ zIndex: 40 }}
+                  className="fixed inset-0 bg-black/40 backdrop-blur-xs md:hidden"
+                />
+              )}
+
               {/* ── LEFT SIDEBAR ─────────────────────────────────────────── */}
               <aside
+                className={`
+                  fixed md:static inset-y-0 left-0 flex flex-col py-8 px-4 gap-2 overflow-hidden transition-transform duration-300 ease-in-out
+                  md:translate-x-0
+                  ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+                `}
                 style={{
                   background: "linear-gradient(160deg, #0a192f 0%, #0d2137 50%, #0f2a48 100%)",
                   width: "260px",
                   minWidth: "260px",
                   flexShrink: 0,
+                  zIndex: 55,
                 }}
-                className="flex flex-col py-8 px-4 gap-2 relative overflow-hidden"
               >
                 {/* Sidebar decorative glows */}
                 <div style={{ width:200, height:200, background:"radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)", top:-60, right:-60, position:"absolute", borderRadius:"50%" }} />
                 <div style={{ width:150, height:150, background:"radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)", bottom:40, left:-40, position:"absolute", borderRadius:"50%" }} />
 
-                {/* Brand */}
-                <div className="flex items-center gap-3 px-3 mb-8">
-                  <div style={{ background:"linear-gradient(135deg,#ff6b00,#ff8c00)", borderRadius:12 }} className="w-10 h-10 flex items-center justify-center text-xl font-black text-white shadow-lg">K</div>
-                  <div>
-                    <div className="font-black text-white text-base tracking-tight">Kope<span style={{color:"#ff6b00"}}>RT</span></div>
-                    <div style={{color:"rgba(255,255,255,0.4)"}} className="text-[9px] uppercase tracking-widest font-semibold">Admin Panel</div>
+                {/* Brand & Close button */}
+                <div className="flex items-center justify-between mb-8 px-3">
+                  <div className="flex items-center gap-3">
+                    <div style={{ background:"linear-gradient(135deg,#ff6b00,#ff8c00)", borderRadius:12 }} className="w-10 h-10 flex items-center justify-center text-xl font-black text-white shadow-lg">K</div>
+                    <div>
+                      <div className="font-black text-white text-base tracking-tight">Kope<span style={{color:"#ff6b00"}}>RT</span></div>
+                      <div style={{color:"rgba(255,255,255,0.4)"}} className="text-[9px] uppercase tracking-widest font-semibold">Admin Panel</div>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                    className="md:hidden w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-xs"
+                    title="Tutup Menu"
+                  >
+                    ✕
+                  </button>
                 </div>
 
                 {/* Admin info pill */}
@@ -1279,7 +1329,10 @@ export default function Home() {
                   return (
                     <button
                       key={item.key}
-                      onClick={() => setAdminTab(item.key)}
+                      onClick={() => {
+                        setAdminTab(item.key);
+                        setIsMobileSidebarOpen(false);
+                      }}
                       type="button"
                       style={{
                         background: isActive ? "linear-gradient(135deg, rgba(59,130,246,0.25), rgba(99,102,241,0.2))" : "transparent",
@@ -1337,12 +1390,24 @@ export default function Home() {
               </aside>
 
               {/* ── MAIN CONTENT AREA ────────────────────────────────────── */}
-              <main style={{ background:"#f8fafc", flex:1, overflowX:"hidden" }} className="flex flex-col min-h-full">
+              <main style={{ background:"#f8fafc", flex:1, overflowX:"hidden" }} className="flex flex-col min-h-full w-full">
 
                 {/* Top bar */}
-                <div style={{ background:"#fff", borderBottom:"1px solid #e2e8f0" }} className="flex items-center justify-between px-8 py-4 shrink-0">
-                  <div>
-                    <h2 style={{ color:"#0a192f", fontWeight:800, fontSize:18, lineHeight:1.2 }}>
+                <div style={{ background:"#fff", borderBottom:"1px solid #e2e8f0" }} className="flex items-center justify-between px-4 md:px-8 py-4 shrink-0 gap-3">
+                  <div className="flex items-center gap-3">
+                    {/* Hamburger Button for mobile */}
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileSidebarOpen(true)}
+                      className="md:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-brand-navy shrink-0 transition"
+                      title="Menu Admin"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                    </button>
+                    <div>
+                      <h2 style={{ color:"#0a192f", fontWeight:800, fontSize:18, lineHeight:1.2 }} className="text-base md:text-lg">
                       {adminTab === "analytics" && "📊 Analitik & Ringkasan"}
                       {adminTab === "users"     && "👥 Manajemen Akun Pengguna"}
                       {adminTab === "warga"     && "🔑 Pendataan NIK & Token Warga"}
@@ -1354,7 +1419,8 @@ export default function Home() {
                       KopeRT · RT 04 / RW 02 · {new Date().toLocaleDateString("id-ID", { weekday:"long", day:"numeric", month:"long", year:"numeric" })}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                </div>
+                <div className="flex items-center gap-3">
                     <div style={{ background:"#f1f5f9", borderRadius:10, padding:"6px 14px", fontSize:11, fontWeight:700, color:"#475569" }} className="flex items-center gap-2">
                       <span style={{ width:7, height:7, borderRadius:"50%", background:"#22c55e", display:"inline-block", boxShadow:"0 0 0 2px rgba(34,197,94,0.3)" }} />
                       Server Online
@@ -2149,8 +2215,10 @@ export default function Home() {
               </main>{/* end main content */}
             </div>{/* end admin-dashboard flex */}
           </ScrollReveal>
-        ) : showOrdersHistory ? (
-          /* USER ORDERS HISTORY PAGE */
+        </main>
+      ) : showOrdersHistory ? (
+        /* USER ORDERS HISTORY PAGE */
+        <main className="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col gap-10">
           <ScrollReveal animation="fade-in">
             <div className="rounded-3xl p-8 nm-flat bg-white border border-white/60">
               <div className="flex justify-between items-center mb-6">
@@ -2270,8 +2338,10 @@ export default function Home() {
               </div>
             </div>
           </ScrollReveal>
-        ) : (
-          /* USER & GUEST LANDING PAGE */
+        </main>
+      ) : (
+        <main className="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col gap-10">
+          {/* USER & GUEST LANDING PAGE */}
           <>
             {/* Hero Section */}
             <ScrollReveal animation="fade-in-up">
@@ -2288,11 +2358,11 @@ export default function Home() {
                     Warga Kini <span className="text-brand-blue">Lebih Praktis</span>
                   </h2>
                   <p className="text-zinc-600 text-sm md:text-base max-w-md">
-                    Pesan sembako segar dan ATK secara online layaknya AlfaGift. Dapatkan layanan antar gratis langsung ke teras rumah Anda atau ambil sendiri ke sekretariat Koperasi RT.
+                    Pesan sembako segar dan ATK secara online. Dapatkan layanan antar gratis langsung ke teras rumah Anda atau ambil sendiri ke sekretariat Koperasi RT.
                   </p>
                   <div className="flex flex-wrap gap-3 mt-2">
                     <a href="#produk-section" className="px-6 py-3 rounded-full text-sm font-bold bg-brand-orange hover:bg-brand-orange-light text-white shadow-md transition-all">
-                      Mulai Belanja 🛍️
+                    Mulai Belanja
                     </a>
                     {!currentUser && (
                       <>
@@ -2304,7 +2374,7 @@ export default function Home() {
                           }} 
                           className="px-6 py-3 rounded-full text-sm font-bold bg-white text-brand-navy nm-button"
                         >
-                          Daftar Pengunjung 👤
+                          Daftar Pengunjung
                         </button>
                         <button 
                           onClick={() => {
@@ -2312,7 +2382,7 @@ export default function Home() {
                           }} 
                           className="px-6 py-3 rounded-full text-sm font-bold bg-brand-blue hover:bg-brand-blue-light text-white shadow-md transition-all"
                         >
-                          Registrasi Warga RT 🏘️
+                          Registrasi Warga RT
                         </button>
                       </>
                     )}
@@ -2329,7 +2399,7 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/90 via-brand-navy/30 to-transparent flex flex-col justify-end p-6 text-white">
                       <h3 className="font-extrabold text-xl">Aplikasi KopeRT</h3>
                       <p className="text-[11px] text-zinc-200 mt-1">
-                        Pesan sembako & ATK dari HP, bayar otomatis via Midtrans.
+                        Pesan Sembako, Makanan & Minuman, dan ATK dari HP
                       </p>
                     </div>
                   </div>
@@ -2339,7 +2409,7 @@ export default function Home() {
 
             {/* Features Info */}
             <ScrollReveal animation="zoom-in" delay={100}>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-center max-w-3xl mx-auto w-full">
                 <div className="p-6 rounded-2xl bg-white nm-flat border border-white/50 flex flex-col items-center">
                   <span className="text-4xl mb-3">🛵</span>
                   <h4 className="font-bold text-brand-navy">Diantar ke Rumah</h4>
@@ -2352,13 +2422,6 @@ export default function Home() {
                   <h4 className="font-bold text-brand-navy">Ambil Sendiri (Pickup)</h4>
                   <p className="text-xs text-zinc-500 mt-2">
                     Pesan dahulu, ambil pesanan Anda saat pulang kerja di Koperasi.
-                  </p>
-                </div>
-                <div className="p-6 rounded-2xl bg-white nm-flat border border-white/50 flex flex-col items-center">
-                  <span className="text-4xl mb-3">💳</span>
-                  <h4 className="font-bold text-brand-navy">Payment Midtrans</h4>
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Pembayaran aman dan otomatis menggunakan QRIS, e-wallet, atau Bank Transfer.
                   </p>
                 </div>
               </div>
@@ -2473,8 +2536,8 @@ export default function Home() {
               </div>
             </ScrollReveal>
           </>
-        )}
-      </main>
+        </main>
+      )}
 
       {/* Cart Drawer / Sidebar */}
       {isCartOpen && (
@@ -2981,22 +3044,9 @@ export default function Home() {
                       required
                       className="w-full px-3 py-2.5 rounded-xl text-xs nm-input text-brand-navy border-none bg-white font-bold"
                     >
-                      <option value="Beras & Produk tepung">Beras & Produk tepung</option>
-                      <option value="Minyak goreng & margarin">Minyak goreng & margarin</option>
-                      <option value="Gula & gula merah">Gula & gula merah</option>
-                      <option value="Tepung terigu & tepung lainnya">Tepung terigu & tepung lainnya</option>
-                      <option value="Telur & produk telur">Telur & produk telur</option>
-                      <option value="Susu & produk olahan susu">Susu & produk olahan susu</option>
-                      <option value="Mie / Mi instan">Mie / Mi instan</option>
-                      <option value="Kopi & teh sachet / bubuk">Kopi & teh sachet / bubuk</option>
-                      <option value="Camilan & biskuit">Camilan & biskuit</option>
-                      <option value="Bumbu dapur instan & dasar (serbuk/kering)">Bumbu dapur instan & dasar (serbuk/kering)</option>
-                      <option value="Produk kalengan & olahan">Produk kalengan & olahan</option>
-                      <option value="Minuman cair (sachet, UHT, sirup)">Minuman cair (sachet, UHT, sirup)</option>
-                      <option value="Kacang kacangan & snack tradisional">Kacang kacangan & snack tradisional</option>
-                      <option value="Sabun, deterjen, perlengkapan kebersihan">Sabun, deterjen, perlengkapan kebersihan</option>
-                      <option value="Kertas tisu & alat tulis sederhana">Kertas tisu & alat tulis sederhana</option>
-                      <option value="Hand sanitizer / antiseptik / kesehatan ringan">Hand sanitizer / antiseptik / kesehatan ringan</option>
+                      <option value="Sembako">Sembako</option>
+                      <option value="Makanan dan Minuman">Makanan dan Minuman</option>
+                      <option value="ATK">ATK</option>
                     </select>
                   </div>
 
@@ -3100,21 +3150,28 @@ export default function Home() {
       )}
 
       {/* Footer */}
-      <footer className="bg-brand-navy text-zinc-400 text-xs py-8 px-6 mt-16 border-t border-zinc-800">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h4 className="font-bold text-sm text-white">KopeRT © 2026</h4>
-            <p className="text-[11px] text-zinc-500 mt-1">Website E-Commerce Koperasi RT 04 / RW 02. Hak Cipta Dilindungi.</p>
+      {userRole !== "admin" && (
+        <footer className="bg-brand-navy text-zinc-400 text-xs py-8 px-6 mt-16 border-t border-zinc-800">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center md:items-start gap-6">
+            <div>
+              <h4 className="font-bold text-sm text-white">KopeRT © 2026</h4>
+              <p className="text-[11px] text-zinc-500 mt-1 max-w-sm">Website E-Commerce Koperasi RT 04 / RW 02. Hak Cipta Dilindungi.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-10 text-[11px] text-zinc-500">
+              <div>
+                <span className="font-bold text-zinc-300 block mb-1">Hubungi Kami</span>
+                <p className="mb-1">📧 <a href="mailto:koperasi.rt04@gmail.com" className="hover:text-white transition">koperasi.rt04@gmail.com</a></p>
+                <p className="mb-0">📞 <a href="tel:081234567890" className="hover:text-white transition">0812-3456-7890</a></p>
+              </div>
+              <div>
+                <span className="font-bold text-zinc-300 block mb-1">Alamat Koperasi</span>
+                <p className="mb-1">📍 Sekretariat RT 04 / RW 02</p>
+                <p className="mb-0">Gedung Serbaguna RT 04, Lantai 1</p>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <span className="text-zinc-600">Teknologi Stack:</span>
-            <span>Django 6.0.5</span>
-            <span>Next.js 16</span>
-            <span>React 19.2.6</span>
-            <span>MySQL</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
