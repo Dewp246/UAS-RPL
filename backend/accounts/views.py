@@ -125,8 +125,8 @@ class WargaVerificationViewSet(viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 for nik in niks_list:
-                    if len(nik) > 16 or not nik.isdigit():
-                        errors.append(f"NIK '{nik}' tidak valid (harus angka maksimal 16 digit).")
+                    if len(nik) != 16 or not nik.isdigit():
+                        errors.append(f"NIK '{nik}' tidak valid (harus berupa 16 digit angka).")
                         skipped_count += 1
                         continue
                     

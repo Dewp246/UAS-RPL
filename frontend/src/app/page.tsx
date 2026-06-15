@@ -244,12 +244,10 @@ export default function Home() {
   const [prodImage, setProdImage] = useState("📦");
   const [prodDesc, setProdDesc] = useState("");
 
-  // Modal / Auth States
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Login Form States
   const [loginIdentifier, setLoginIdentifier] = useState("");
@@ -1255,51 +1253,27 @@ export default function Home() {
             <div id="admin-dashboard" style={{ minHeight: "calc(100vh - 80px)" }}
               className="flex overflow-hidden border-0 shadow-none w-full"
             >
-              {/* Sidebar backdrop for mobile */}
-              {isMobileSidebarOpen && (
-                <div 
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  style={{ zIndex: 40 }}
-                  className="fixed inset-0 bg-black/40 backdrop-blur-xs md:hidden"
-                />
-              )}
-
               {/* ── LEFT SIDEBAR ─────────────────────────────────────────── */}
               <aside
-                className={`
-                  fixed md:static inset-y-0 left-0 flex flex-col py-8 px-4 gap-2 overflow-hidden transition-transform duration-300 ease-in-out
-                  md:translate-x-0
-                  ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-                `}
+                className="flex flex-col py-8 px-4 gap-2 relative overflow-hidden"
                 style={{
                   background: "linear-gradient(160deg, #0a192f 0%, #0d2137 50%, #0f2a48 100%)",
                   width: "260px",
                   minWidth: "260px",
                   flexShrink: 0,
-                  zIndex: 55,
                 }}
               >
                 {/* Sidebar decorative glows */}
                 <div style={{ width:200, height:200, background:"radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)", top:-60, right:-60, position:"absolute", borderRadius:"50%" }} />
                 <div style={{ width:150, height:150, background:"radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)", bottom:40, left:-40, position:"absolute", borderRadius:"50%" }} />
 
-                {/* Brand & Close button */}
-                <div className="flex items-center justify-between mb-8 px-3">
-                  <div className="flex items-center gap-3">
-                    <div style={{ background:"linear-gradient(135deg,#ff6b00,#ff8c00)", borderRadius:12 }} className="w-10 h-10 flex items-center justify-center text-xl font-black text-white shadow-lg">K</div>
-                    <div>
-                      <div className="font-black text-white text-base tracking-tight">Kope<span style={{color:"#ff6b00"}}>RT</span></div>
-                      <div style={{color:"rgba(255,255,255,0.4)"}} className="text-[9px] uppercase tracking-widest font-semibold">Admin Panel</div>
-                    </div>
+                {/* Brand */}
+                <div className="flex items-center gap-3 px-3 mb-8">
+                  <div style={{ background:"linear-gradient(135deg,#ff6b00,#ff8c00)", borderRadius:12 }} className="w-10 h-10 flex items-center justify-center text-xl font-black text-white shadow-lg">K</div>
+                  <div>
+                    <div className="font-black text-white text-base tracking-tight">Kope<span style={{color:"#ff6b00"}}>RT</span></div>
+                    <div style={{color:"rgba(255,255,255,0.4)"}} className="text-[9px] uppercase tracking-widest font-semibold">Admin Panel</div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsMobileSidebarOpen(false)}
-                    className="md:hidden w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-xs"
-                    title="Tutup Menu"
-                  >
-                    ✕
-                  </button>
                 </div>
 
                 {/* Admin info pill */}
@@ -1329,10 +1303,7 @@ export default function Home() {
                   return (
                     <button
                       key={item.key}
-                      onClick={() => {
-                        setAdminTab(item.key);
-                        setIsMobileSidebarOpen(false);
-                      }}
+                      onClick={() => setAdminTab(item.key)}
                       type="button"
                       style={{
                         background: isActive ? "linear-gradient(135deg, rgba(59,130,246,0.25), rgba(99,102,241,0.2))" : "transparent",
@@ -1393,21 +1364,9 @@ export default function Home() {
               <main style={{ background:"#f8fafc", flex:1, overflowX:"hidden" }} className="flex flex-col min-h-full w-full">
 
                 {/* Top bar */}
-                <div style={{ background:"#fff", borderBottom:"1px solid #e2e8f0" }} className="flex items-center justify-between px-4 md:px-8 py-4 shrink-0 gap-3">
-                  <div className="flex items-center gap-3">
-                    {/* Hamburger Button for mobile */}
-                    <button
-                      type="button"
-                      onClick={() => setIsMobileSidebarOpen(true)}
-                      className="md:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-brand-navy shrink-0 transition"
-                      title="Menu Admin"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
-                      </svg>
-                    </button>
-                    <div>
-                      <h2 style={{ color:"#0a192f", fontWeight:800, fontSize:18, lineHeight:1.2 }} className="text-base md:text-lg">
+                <div style={{ background:"#fff", borderBottom:"1px solid #e2e8f0" }} className="flex items-center justify-between px-8 py-4 shrink-0">
+                  <div>
+                    <h2 style={{ color:"#0a192f", fontWeight:800, fontSize:18, lineHeight:1.2 }}>
                       {adminTab === "analytics" && "📊 Analitik & Ringkasan"}
                       {adminTab === "users"     && "👥 Manajemen Akun Pengguna"}
                       {adminTab === "warga"     && "🔑 Pendataan NIK & Token Warga"}
@@ -1419,8 +1378,7 @@ export default function Home() {
                       KopeRT · RT 04 / RW 02 · {new Date().toLocaleDateString("id-ID", { weekday:"long", day:"numeric", month:"long", year:"numeric" })}
                     </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <div style={{ background:"#f1f5f9", borderRadius:10, padding:"6px 14px", fontSize:11, fontWeight:700, color:"#475569" }} className="flex items-center gap-2">
                       <span style={{ width:7, height:7, borderRadius:"50%", background:"#22c55e", display:"inline-block", boxShadow:"0 0 0 2px rgba(34,197,94,0.3)" }} />
                       Server Online
@@ -2454,17 +2412,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Search Bar Mobile */}
-                <div className="md:hidden w-full relative">
-                  <input
-                    type="text"
-                    placeholder="Cari sembako, ATK, minyak..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-5 py-3 rounded-full text-sm nm-input text-brand-navy"
-                  />
-                  <span className="absolute right-4 top-3.5 text-zinc-400">🔍</span>
-                </div>
 
                 {/* Product Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">

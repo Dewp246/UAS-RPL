@@ -10,6 +10,11 @@ class WargaVerificationSerializer(serializers.ModelSerializer):
         fields = ('id', 'nik', 'token', 'is_used', 'created_at')
         read_only_fields = ('id', 'token', 'is_used', 'created_at')
 
+    def validate_nik(self, value):
+        if not value.isdigit() or len(value) != 16:
+            raise serializers.ValidationError("NIK harus berupa 16 digit angka.")
+        return value
+
 class UserSerializer(serializers.ModelSerializer):
     # Determine if PIN is set (to not expose PIN directly in JSON)
     has_pin = serializers.SerializerMethodField()

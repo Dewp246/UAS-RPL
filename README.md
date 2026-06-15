@@ -3,8 +3,8 @@
 Aplikasi **Koperasi RT (KopeRT)** adalah platform e-commerce dan loyalitas warga tingkat Rukun Tetangga (RT) yang mengintegrasikan sistem belanja kebutuhan pokok, manajemen alamat pengiriman, loyalitas digital (A-Poin & Digital Stamps), verifikasi PIN transaksi, serta gerbang pembayaran online otomatis menggunakan Midtrans.
 
 Proyek ini terbagi menjadi dua bagian utama:
-*   [**Backend (Django REST Framework)**](file:///c:/Kuliah/Semester%204/Rekayasa%20Perangkat%20Lunak/UAS/backend/)
-*   [**Frontend (Next.js & TypeScript)**](file:///c:/Kuliah/Semester%204/Rekayasa%20Perangkat%20Lunak/UAS/frontend/)
+*   [**Backend (Django REST Framework)**](./backend/)
+*   [**Frontend (Next.js & TypeScript)**](./frontend/)
 
 ---
 
@@ -12,7 +12,7 @@ Proyek ini terbagi menjadi dua bagian utama:
 
 Sistem menggunakan arsitektur **Decoupled Client-Server**:
 1.  **Backend (Django REST Framework)**:
-    *   **Bahasa/Framework**: Python 3 & Django 6.0.5 + DRF
+    *   **Bahasa/Framework**: Python 3 & Django 5.x / 6.x + DRF
     *   **Database**: MySQL (`koperasi_rt`)
     *   **Autentikasi**: JWT (JSON Web Tokens) melalui `djangorestframework-simplejwt`
     *   **Integrasi Pembayaran**: Midtrans Snap API (Sandbox) & Webhook untuk notifikasi status pembayaran
@@ -166,7 +166,7 @@ Menyimpan katalog produk kebutuhan yang dijual di koperasi.
 | :--- | :--- | :--- |
 | `id` | `INT (PK, Auto Increment)` | ID unik produk. |
 | `name` | `VARCHAR(200)` | Nama barang. |
-| `category` | `VARCHAR(100)` | Kategori barang (misal: Sembako, Minyak, Mie Instan). |
+| `category` | `VARCHAR(100)` | Kategori barang (Sembako, Makanan dan Minuman, ATK). |
 | `price` | `DECIMAL(12, 2)` | Harga dasar satuan barang (`original_price`). |
 | `image` | `VARCHAR(500)` | Emoji / Icon / Path gambar produk. |
 | `stock` | `INT` | Jumlah stok yang tersedia. |
@@ -313,3 +313,71 @@ Setiap kali transaksi diselesaikan (`paid`), warga RT (`role = warga`) akan memp
 *   **A-Poin**: Belanja kelipatan **Rp10.000** = **+1 Poin**.
 *   **Stamp Digital**: Belanja kelipatan **Rp50.000** = **+1 Stamp**.
 *   *Catatan: Poin dan stamp tidak berlaku bagi peran `user` (non-warga).*
+
+---
+
+## 🚀 Cara Menjalankan Aplikasi
+
+### 1. Database (MySQL)
+Pastikan server database MySQL Anda sudah berjalan (misal menggunakan Laragon atau XAMPP).
+*   **Host**: `127.0.0.1`
+*   **Port**: `3306`
+*   **User**: `root`
+*   **Password**: *(dikosongkan)*
+
+### 2. Backend (Django)
+1. Masuk ke folder backend:
+   ```bash
+   cd backend
+   ```
+2. Buat virtual environment (venv) & aktifkan:
+   - **PowerShell**:
+     ```powershell
+     python -m venv .venv
+     .\.venv\Scripts\Activate.ps1
+     ```
+   - **Command Prompt (CMD)**:
+     ```cmd
+     python -m venv .venv
+     .\.venv\Scripts\activate.bat
+     ```
+3. Instal dependensi:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Jalankan database creation & migrasi:
+   ```bash
+   python create_db.py
+   python manage.py migrate
+   ```
+5. Jalankan seed data produk & admin:
+   ```bash
+   python seed_products.py
+   python create_superuser.py
+   ```
+6. Jalankan server backend:
+   ```bash
+   python manage.py runserver
+   ```
+
+### 3. Frontend (Next.js)
+1. Buka terminal baru dan masuk ke folder frontend:
+   ```bash
+   cd frontend
+   ```
+2. Instal dependensi:
+   ```bash
+   npm install
+   ```
+3. Jalankan server pengembangan frontend:
+   ```bash
+   npm run dev
+   ```
+   Aplikasi dapat diakses di browser pada URL: `http://localhost:3000`
+
+### 4. Ekspos Notifikasi Webhook Midtrans (Menggunakan Localtunnel)
+Karena Midtrans membutuhkan HTTPS URL publik untuk notifikasi webhook, ekspos port 8000 menggunakan localtunnel:
+```bash
+npx localtunnel --port 8000
+```
+Daftarkan URL publik yang dihasilkan (misal `https://xxxx.loca.lt/api/payments/notification/`) pada Dashboard Sandbox Midtrans di menu **Settings > Configuration**.

@@ -18,14 +18,9 @@ export default function ScrollReveal({
   duration = 600,
 }: ScrollRevealProps) {
   const [isIntersecting, setIsIntersecting] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsMobile(window.innerWidth < 768);
-    }
-
     // Fallback: automatically trigger animation after 400ms to guarantee visibility
     const fallbackTimer = setTimeout(() => {
       setIsIntersecting(true);
@@ -57,10 +52,6 @@ export default function ScrollReveal({
   }, []);
 
   const getAnimationStyles = () => {
-    if (isMobile || typeof window === "undefined") {
-      return {};
-    }
-
     const baseTransition = `opacity ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`;
     
     let initialTransform = "";
